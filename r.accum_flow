@@ -114,7 +114,7 @@ def get_multiplier(out_units='meters'):
     """
     # Get units of current projection
     proj_settings = gscript.read_command('g.proj', flags='g')
-    proj_units = gscript.parse_key_val(proj_settings)['units']
+    proj_units = gscript.parse_key_val(proj_settings)['units'].lower()
     # Get size of pixel from region settings
     region_settings = gscript.region()
     pixel = region_settings['ewres'] * region_settings['nsres']
@@ -136,7 +136,7 @@ def cleanup(pref):
     """
     mapset = gscript.gisenv()['MAPSET']
     gscript.warning("Deleting all <%s_*> maps from MAPSET: %s" % (pref,mapset))
-    temp_list = gscript.list_grouped(type='vect', pattern=pref+'_tmp*', check_search_path=False)
+    temp_list = gscript.list_grouped(type='vect', pattern=pref+'_*', check_search_path=False)
     rmlist = temp_list[mapset]
     gscript.run_command('g.remove', type='vect', name=rmlist, flag='f', quiet=True)
     temp_list = gscript.list_grouped(type='rast', pattern=pref+'_*', check_search_path=False)
@@ -154,10 +154,10 @@ def main():
         out_units = 'meters'
  
     # Check for DEM, and exit if it does not exist
-    mapset = gscript.gisenv()['MAPSET']
-    exists = bool(gscript.find_file(dem, element = 'raster', mapset = mapset)['file'])
+    #mapset = gscript.gisenv()['MAPSET']
+    exists = bool(gscript.find_file(dem, element = 'raster')['file'])
     if not exists:
-        gscript.fatal(("Raster DEM map <%s> not found in current mapset. Exiting...") % dem)
+        gscript.fatal(("Raster DEM map <%s> not found. Exiting...") % dem)
         
     # Check for latlong location, output error if true and exit
     if gscript.locn_is_latlong():
@@ -165,7 +165,7 @@ def main():
     
     # Pre Flight Check OK, go ahead
     gscript.message("Running watershed and flow accumulation analysis from DEM <%s>" % dem)
-    gscript.run_command('g.region',rast=dem, flags='p')    
+    gscript.run_command('g.region',rast=dem, quiet=True)    
     mult = get_multiplier(out_units)
     streams = process_flow_accum(dem, thresh, pref, streams, mult)
     

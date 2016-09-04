@@ -71,6 +71,73 @@ Creates stream network (using r.stream.order) and adds flow accumulation for eac
 <h2>NOTES</h2>
 
 <em>r.accum_flow</em>builds on <em>r.stream.order</em> by both adding accumulated flow at the start point of each stream segment, and calculating the total accumulated flow in the geographic units requested in the <code>units</code> parameter
+
+<h2><a name="examples">Examples</a></h2>
+<h3><a name="North-Carolina-LOCATION">Accumulated flow in North Carolina location</a></h3>
+<div class="code"><pre>
+GRASS 7.0.4 (nc_basic_spm_grass7):~/ > r.accum_flow elev=elevation streams=nc_streams pref=tmp thresh=10000 units=hectares
+Running watershed and flow accumulation analysis from DEM <elevation>
+Converting to hectares with multiplier: 0.0100
+WARNING: Column number 2 <x> defined as double has only integer values
+WARNING: Column number 3 <y> defined as double has only integer values
+Calculating accumulated flow.
+Created streams vector: <nc_streams> with accumulated flows
+
+GRASS 7.0.4 (nc_basic_spm_grass7):~/ > v.info -c nc_streams
+Displaying column types/names for database connection of layer <1>:
+INTEGER|cat
+INTEGER|stream
+INTEGER|next_stream
+INTEGER|prev_str01
+INTEGER|prev_str02
+INTEGER|strahler
+INTEGER|horton
+INTEGER|shreve
+INTEGER|hack
+INTEGER|topo_dim
+INTEGER|scheidegger
+INTEGER|drwal_old
+DOUBLE PRECISION|length
+DOUBLE PRECISION|stright
+DOUBLE PRECISION|sinosoid
+DOUBLE PRECISION|cum_length
+DOUBLE PRECISION|flow_accum
+DOUBLE PRECISION|out_dist
+DOUBLE PRECISION|source_elev
+DOUBLE PRECISION|outlet_elev
+DOUBLE PRECISION|elev_drop
+DOUBLE PRECISION|out_drop
+DOUBLE PRECISION|gradient
+DOUBLE PRECISION|start_x
+DOUBLE PRECISION|start_y
+DOUBLE PRECISION|upstream_accum
+DOUBLE PRECISION|downstream_accum
+
+GRASS 7.0.4 (nc_basic_spm_grass7):~/ > v.db.select map=nc_streams columns="strahler,length,upstream_accum,downstream_accum" where="stream<40"
+strahler|length|upstream_accum|downstream_accum
+1|1269.533188|106.4|301.72
+1|1391.959595|138.15|223.45
+1|2446.518036|123.96|456.27
+1|1637.523087|107.59|177.22
+1|1300.538239|100.28|234.27
+1|1316.396103|110.16|206.42
+2|1802.081528|1032.11|1165.79
+2|2164.507935|508.35|744.14
+1|969.116882|106.33|201
+1|1996.812409|111.86|307.34
+1|1778.528137|116.24|287.93
+1|335.563492|100.56|108.59
+1|1382.964646|107.22|155.22
+3|1824.091629|6209.18|6386.59
+3|441.421356|6072.19|6075.46
+1|1764.680374|142.18|295.6
+3|733.847763|5738.62|5776.53
+3|1176.396103|4851.5|4911.23
+2|2093.502884|618.36|807.81
+
+</pre></div>
+
+
 <h2>See Also</h2>
 <em>
   <a href="r.watershed.html">r.watershed</a>,
