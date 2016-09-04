@@ -1,0 +1,180 @@
+#!/usr/bin/env python
+#
+############################################################################
+#
+#MODULE:    r.accum_flow
+#AUTHOR(S): Micha Silver <micha AT arava co il>
+#PURPOSE:   Create a stream network from DEM, and add to each stream segment
+#        total accumulated flow at both start and end points of the segment
+#COPYRIGHT: (C) 2016 Micha Silver, and by the GRASS Development Team
+#           This program is free software under the GNU General Public
+#           License (>=v2). Read the file COPYING that comes with GRASS
+#           for details.
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+############################################################################
+
+#%module
+#% description: Create stream network with flow accumulation for each stream segment
+#%end
+
+#%option G_OPT_R_INPUT
+#% description: Input elevation raster:
+#% key: elevation
+#% required : yes
+#%end
+
+#%option G_OPT_R_OUTPUT
+#% description: Name for output streams vector map:
+#% key: streams
+#% required : yes
+#%end
+
+#%option 
+#% description: Prefix prepended to output map names (temp maps)
+#% key: prefix
+#% type: string
+#% required : yes
+#%end
+
+#%option
+#% description: Threshold minimum basin size (as in r.watershed)  
+#% key: thresh
+#% type: integer
+#% required: yes
+#%end
+
+#%option G_OPT_M_UNITS
+#% description: Units for area calculation. Values: meters, kilometers, feet, miles, hectares, acres (default: meters)
+#% key: units
+#% required: no
+#% options: meters, kilometers, feet, miles, hectares, acres
+#% answer: meters
+#%end
+
+#%flag
+#% key: d
+#% description: Delete temporary rasters 
+#%end
+
+import grass.script as gscript
+import sys
+
+def process_flow_accum(dem, thresh, pref, streams, mult):
+    facc = pref + '_flow_acc'
+    fdir = pref + '_flow_dir'
+    strahler = pref + '_strahler'
+    start_pts = pref + '_start_points'
+
+    gscript.run_command('r.watershed',elevation=dem, accumulation=facc, drainage=fdir,
+        stream=streams, threshold=thresh, flags='as', overwrite=True, quiet=True)
+    gscript.run_command('r.stream.order', stream_rast=streams, elev=dem, accum=facc, direction=fdir,
+        stream_vect=streams, strahler=strahler, overwrite=True, quiet=True)
+    gscript.run_command('v.db.addcolumn', map=streams, overwrite=True, quiet=True,
+        columns="start_x DOUBLE PRECISION, start_y DOUBLE PRECISION, upstream_accum DOUBLE PRECISION, downstream_accum DOUBLE PRECISION")
+    gscript.run_command('v.to.db', map=streams, option='start', columns="start_x,start_y", quiet=True)
+    
+    # Pipe output from v.db.select into v.in.ascii to create point map of segment end points
+    p1 = gscript.pipe_command('v.db.select', map=streams, columns='cat,start_x,start_y', quiet=True, flags='c')
+    p2 = gscript.run_command('v.in.ascii', input='-', stdin=p1.stdout, output=start_pts, x=2, y=3, 
+        columns='cat_1 INTEGER, x DOUBLE PRECISION, y DOUBLE PRECISION', quiet=True, overwrite=True)
+    p1.stdout.close()
+    
+    # Get flow accum from raster at segment start points
+    gscript.run_command('v.db.addcolumn', map=start_pts, quiet=True, overwrite=True,
+        columns='accum_pixels DOUBLE PRECISION, accum_area DOUBLE PRECISION')
+    gscript.run_command('v.what.rast', map=start_pts, raster=facc, column='accum_pixels', 
+        quiet=True, overwrite=True)
+    
+    gscript.message('Calculating accumulated flow.')
+    area_expr = 'round((abs(accum_pixels)*'+str(mult)+'),2)'
+    gscript.run_command('v.db.update', map=start_pts, column='accum_area', query_col=area_expr, quiet=True)
+    
+    # Calculate total flow accumulation at start point of stream segment
+    sql_expr = 'UPDATE '+streams+' SET upstream_accum=(SELECT accum_area FROM '+start_pts+' WHERE cat_1='+streams+'.cat)'
+    gscript.run_command('db.execute', sql=sql_expr, quiet=True)
+    # Use flow_accum column from r.stream.order to calculate total downstream accum
+    sql_expr2 = 'UPDATE '+streams+' SET downstream_accum=round((flow_accum*'+str(mult)+'),2)'
+    gscript.run_command('db.execute', sql=sql_expr2, quiet=True)
+    
+    return streams
+
+def get_multiplier(out_units='meters'):
+    """
+    Calculate multiplier, based on region resolution and requested output units
+    """
+    # Get units of current projection
+    proj_settings = gscript.read_command('g.proj', flags='g')
+    proj_units = gscript.parse_key_val(proj_settings)['units']
+    # Get size of pixel from region settings
+    region_settings = gscript.region()
+    pixel = region_settings['ewres'] * region_settings['nsres']
+    
+    # Conversion matrix
+    if (proj_units == 'meters'):
+        conv = {'meters':1,'kilometers':0.000001, 'feet':10.7639, 'miles':0.0000003861, 'hectares':0.0001, 'acres':0.00024711}
+    elif (proj_units == 'feet'):
+        conv = {'meters':0.0929,'kilometers':0.0000000929, 'feet':1, 'miles':0.00000003587, 'hectares':0.00000929, 'acres':0.000022957}
+    
+    mult = conv[out_units]*pixel
+    print("Converting to %s with multiplier: %.4f" % (out_units, mult))
+    return mult
+    
+    
+def cleanup(pref):
+    """
+    Remove all temp layers, raster and vector
+    """
+    mapset = gscript.gisenv()['MAPSET']
+    gscript.warning("Deleting all <%s_*> maps from MAPSET: %s" % (pref,mapset))
+    temp_list = gscript.list_grouped(type='vect', pattern=pref+'_tmp*', check_search_path=False)
+    rmlist = temp_list[mapset]
+    gscript.run_command('g.remove', type='vect', name=rmlist, flag='f', quiet=True)
+    temp_list = gscript.list_grouped(type='rast', pattern=pref+'_*', check_search_path=False)
+    rmlist = temp_list[mapset]
+    gscript.run_command('g.remove', type='rast', name=rmlist, flags='f', quiet=True)
+
+
+def main():
+    dem = options['elevation']
+    thresh = options['thresh']
+    pref = options['prefix']
+    streams = options['streams']
+    out_units = options['units']
+    if out_units is None:
+        out_units = 'meters'
+ 
+    # Check for DEM, and exit if it does not exist
+    mapset = gscript.gisenv()['MAPSET']
+    exists = bool(gscript.find_file(dem, element = 'raster', mapset = mapset)['file'])
+    if not exists:
+        gscript.fatal(("Raster DEM map <%s> not found in current mapset. Exiting...") % dem)
+        
+    # Check for latlong location, output error if true and exit
+    if gscript.locn_is_latlong():
+        gscript.fatal("Current LOCATION is Lat/Lon. Please switch to a projected CRS. Exiting...")
+    
+    # Pre Flight Check OK, go ahead
+    gscript.message("Running watershed and flow accumulation analysis from DEM <%s>" % dem)
+    gscript.run_command('g.region',rast=dem, flags='p')    
+    mult = get_multiplier(out_units)
+    streams = process_flow_accum(dem, thresh, pref, streams, mult)
+    
+    # Remove temp work maps
+    if (flags['d']):
+        cleanup(pref)
+
+    gscript.message("Created streams vector: <%s> with accumulated flows" % streams)
+
+if __name__ == "__main__":
+    options, flags = gscript.parser()
+    sys.exit(main())

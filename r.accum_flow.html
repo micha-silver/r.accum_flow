@@ -1,0 +1,74 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>GRASS GIS manual: r.accum_flow</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+<div id="container">
+
+<a href="index.html"><img src="grass_logo.png" alt="GRASS logo"></a>
+<hr class="header">
+
+<h2>NAME</h2>
+<em><b>r.accum_flow</b></em>  - Create stream network with flow accumulation for each stream segment
+<h2>KEYWORDS</h2>
+<h2>DESCRIPTION</h2>
+<em>r.accum_flow</em> creates a stream network and calculates total flow accumulation for each steam segment at both the start and end points of each segment. The area contributing flow to each stream segment is added as two columns in the stream vector map: upstream_accum and downstream_accum for the start and end points of each segment, respectively. 
+<h2>SYNOPSIS</h2>
+<div id="name"><b>r.accum_flow</b><br></div>
+<b>r.accum_flow --help</b><br>
+<div id="synopsis"><b>r.accum_flow</b> [-<b>d</b>] <b>elevation</b>=<em>name</em> <b>prefix</b>=<em>name</em> <b>thresh</b>=<em>integer</em>  [<b>units</b>=<em>string</em>]   [--<b>overwrite</b>]  [--<b>help</b>]  [--<b>verbose</b>]  [--<b>quiet</b>]  [--<b>ui</b>] 
+</div>
+
+<div id="flags">
+<h3>Flags:</h3>
+<dl>
+<dt><b>-d</b></dt>
+<dd>Delete temporary rasters</dd>
+
+<dt><b>--overwrite</b></dt>
+<dd>Allow output files to overwrite existing files</dd>
+<dt><b>--help</b></dt>
+<dd>Print usage summary</dd>
+<dt><b>--verbose</b></dt>
+<dd>Verbose module output</dd>
+<dt><b>--quiet</b></dt>
+<dd>Quiet module output</dd>
+<dt><b>--ui</b></dt>
+<dd>Force launching GUI dialog</dd>
+</dl>
+</div>
+
+<div id="parameters">
+<h3>Parameters:</h3>
+<dl>
+<dt><b>elevation</b>=<em>name</em>&nbsp;<b>[required]</b></dt>
+<dd>Input elevation raster:</dd>
+
+<dt><b>prefix</b>=<em>name</em>&nbsp;<b>[required]</b></dt>
+<dd>Prefix prepended to output map names</dd>
+
+<dt><b>thresh</b>=<em>integer</em>&nbsp;<b>[required]</b></dt>
+<dd>Threshold minimum basin size (as in r.watershed)</dd>
+
+<dt><b>units</b>=<em>string</em></dt>
+<dd>Units for area calculation. Values: meters, kilometers, feet, miles, hectares, acres (default: meters)</dd>
+<dd>Options: <em>meters,  kilometers,  feet,  miles,  hectares,  acres</em></dd>
+<dd>Default: <em>meters</em></dd>
+
+</dl>
+</div>
+
+<h2>NOTES</h2>
+
+<em>r.accum_flow</em>builds on <em>r.stream.order</em> by both adding accumulated flow at the start point of each stream segment, and calculating the total accumulated flow in the geographic units requested in the <code>units</code> parameter
+<h2>See Also</h2>
+<em>
+  <a href="r.watershed.html">r.watershed</a>,
+  <a href="r.stream.order.html">r.stream.order</a>,
+  <a href="v.to.db.html">v.to.db</a>,
+</em>
+</body>
+</html>
