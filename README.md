@@ -14,8 +14,8 @@ Creates stream network (using r.stream.order) and adds flow accumulation for eac
 
 REQUIRES
 ---------------------
-GRASS 7.x
-**r.stream.order** addon
++  GRASS 7.x
++  **r.stream.order** addon
 
 SYNOPSIS
 ----------------------
