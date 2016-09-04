@@ -33,7 +33,7 @@
 #% required : yes
 #%end
 
-#%option G_OPT_R_OUTPUT
+#%option G_OPT_V_OUTPUT
 #% description: Name for output streams vector map:
 #% key: streams
 #% required : yes
