@@ -12,6 +12,11 @@ DESCRIPTION
 ----------------------
 Creates stream network (using r.stream.order) and adds flow accumulation for each stream segment, at both the start and end points of each segment. Total area of flow accumulation is in units specified by the `units` parameter (default square meters). The area contributing flow to each stream segment is added as two columns in the stream vector map: upstream_accum and downstream_accum for the start and end points of each segment, respectively.
 
+REQUIRES
+---------------------
+GRASS 7.x
+**r.stream.order** addon
+
 SYNOPSIS
 ----------------------
 **r.accum_flow**
